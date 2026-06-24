@@ -1,24 +1,53 @@
 const express = require("express");
 const cors = require("cors");
+const mongoose = require("mongoose");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-let tasks = [];
+/* ======================
+   MongoDB Connection
+====================== */
+mongoose.connect(process.env.MONGO_URL)
+  .then(() => console.log("MongoDB Connected"))
+  .catch(err => console.log(err));
 
-app.get("/tasks", (req, res) => {
+/* ======================
+   Task Schema
+====================== */
+const taskSchema = new mongoose.Schema({
+  title: String
+});
+
+const Task = mongoose.model("Task", taskSchema);
+
+/* ======================
+   Routes
+====================== */
+
+// Get all tasks
+app.get("/tasks", async (req, res) => {
+  const tasks = await Task.find();
   res.json(tasks);
 });
 
-app.post("/tasks", (req, res) => {
-  tasks.push(req.body);
-  res.json({ message: "added" });
+// Add task
+app.post("/tasks", async (req, res) => {
+  const newTask = new Task(req.body);
+  await newTask.save();
+  res.json({ message: "added", task: newTask });
 });
 
-app.delete("/tasks/:id", (req, res) => {
-  tasks = tasks.filter((_, i) => i != req.params.id);
+// Delete task
+app.delete("/tasks/:id", async (req, res) => {
+  await Task.findByIdAndDelete(req.params.id);
   res.json({ message: "deleted" });
 });
 
-app.listen(5000, () => console.log("Server running"));
+/* ======================
+   Server
+====================== */
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => console.log("Server running on " + PORT));
